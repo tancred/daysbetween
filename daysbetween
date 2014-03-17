@@ -1,0 +1,106 @@
+#!/usr/bin/env ruby
+require 'date'
+
+# one arg: days between today and 'date', or date 'num_days' before or after today
+# daysbetween date => daysbetween today date
+# daysbetween +-num_days => daysbetween today +-num_days
+
+# two args: days between 'date' and 'other_date', or
+# daysbetween date other_date
+# daysbetween date +-num_days
+
+# daysbetween date date2 date3 ...
+#         date  date2  date3  date4
+#  date   0      x      y     a
+#  date2  x      0      z     b
+#  date3  y      z      0     c
+#  date4  a      b      c     0
+
+# daysbetween n1 n2 n3 ...
+# today+n1
+# today+n2
+# today+n3
+# ...
+
+# daysbetween d1 d2 n1 n2
+# d1-n1=a
+# d1-n2=b
+# d2-n1=c
+# d2-n2=d
+# (a b c d)x(a b c d)
+
+#=>
+#daysbetween d1 => daysbetween today d1 => (today d1)x(today d1)
+#daysbetween n1 => daysbetween today n1 => today+n1=a, (today a)x(today a)
+#daysbetween n1 n2 n3 => daysbetween today n1 n2 n3 => ...
+
+def print_usage
+  s = ""
+  s += "Usage: daysbetween date [other_date|num_days]\n\n"
+  s += "Prints the (positive) number of days between 'date' and 'other_date'.\n\n"
+  s += "   date          A date spec such as '2007-07-04'\n"
+  s += "   other_date    Similar to 'date' but defaults to today's date.\n"
+  s += "   num_days      Number of days to add or subtract from 'date': '+43', '-2'"
+  $stderr.puts s
+  exit 1
+end
+
+input_dates = []
+input_diffs = []
+ARGV.each do |arg|
+  begin
+    if (["+","-"].include?(arg[0].chr))
+      input_diffs << arg.to_i # validate num
+    else
+      input_dates << Date.parse(arg)
+    end
+  rescue
+    puts $!.inspect
+    print_usage()
+  end
+end
+
+print_usage() if ARGV.empty?
+comparison_dates = []
+comparison_dates.push(Date.today) if (ARGV.size == 1 || input_dates.empty?)
+
+comparison_dates.concat(input_dates)
+diff_dates = []
+input_diffs.each do |diff_n|
+  comparison_dates.each do |date_n|
+    newdate = date_n + diff_n
+    puts "#{date_n.strftime}#{'%+d' % diff_n}=#{newdate.strftime}"
+    diff_dates << newdate
+  end
+end
+comparison_dates.concat(diff_dates)
+comparison_dates.sort!
+#puts "comps: #{comparison_dates.collect {|x| x.strftime}.inspect}"
+
+cross = {}
+max_cell_size = 10+2
+comparison_dates.each {|d1|
+  t = {}
+  cross[d1.strftime] = t
+  comparison_dates.each {|d2|
+    str = "%d" % (d2-d1)
+    t[d2.strftime] = str
+    max_cell_size = str.size if str.size > max_cell_size
+  }
+}
+
+puts "" unless input_diffs.empty?
+head = "%*s" % [max_cell_size, ""]
+comparison_dates.each {|d1|
+  head += "%*s" % [max_cell_size, d1.strftime]
+}
+puts head
+
+comparison_dates.each {|d1|
+  row = "%*s" % [max_cell_size, d1.strftime]
+  
+  comparison_dates.each {|d2|
+    row += "%*s" % [max_cell_size, cross[d1.strftime][d2.strftime]]
+  }
+  puts row
+}
